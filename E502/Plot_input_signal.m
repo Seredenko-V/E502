@@ -1,10 +1,10 @@
 clc, close all, clear;
-data = dlmread('input.txt');
+data = dlmread('input_CH1.txt');
 data = data';
 figure(1);
 plot(data);
 N = length(data);
-fd = 16000;
+fd = 10000;
 fn = 1800;
 dt = 1 / fd;
 w0=2*pi*fn;
