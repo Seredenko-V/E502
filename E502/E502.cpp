@@ -218,7 +218,7 @@ void streaming_output_input(t_x502_hnd& hnd, int32_t& err, uint32_t size, double
     uint32_t* out_buf = new uint32_t[size]; /* Выходной массив, в который будут сохранены сформированные отсчеты */
     for (uint32_t i = 0; i < size; i++)
     {
-        out_buf[i] = 0.0;
+        out_buf[i] = 0;
     }
     uint32_t size_in_buf = size;
     uint32_t size_out_buf = size_in_buf;
@@ -282,9 +282,9 @@ int main()
     int32_t err = X502_ERR_OK;
     uint32_t tout = 1000; // таймаут (в мс) на время ожидания события
     uint32_t mode = X502_MODE_FPGA; // режим работы модуля
-    double Fn = 1800; // несущая частота, Гц
+    double Fn = 1000; // несущая частота, Гц
     double A = 1.0; // амплитуда колебания
-    uint32_t Fd = 10000; // частота дискретизации, Гц (должна быть кратна опроной (2 МГц))
+    uint32_t Fd = 20000; // частота дискретизации, Гц (должна быть кратна опроной (2 МГц))
     if (X502_REF_FREQ_2000KHZ % Fd)
     {
         cout << "Опорная частота не кратна частоте дискретизации." << endl << "Исправьте значение переменной Fd" << endl;
@@ -296,13 +296,9 @@ int main()
         return 0;
     set_parametr(hnd, err, Fd);
     uint32_t size_buf = 1000; // количество отсчетов в одном буфере
-    uint32_t step = 200; // количество проходок цикла
+    uint32_t step = 400; // количество проходок цикла
     t_x502_hnd hnd_in = hnd;
-    //thread output(streaming_output, hnd, err, size_buf, Fn, Fd, A, tout, step*2);
-    //output.detach();
     streaming_output_input(hnd, err, size_buf, Fn, Fd, A, tout, step);
-    //thread input(streaming_input, hnd_in, err, size_buf, Fn, Fd, A, tout, step);
-    //input.join();
     close_connection_module(err, hnd);
     return 0;
 }
