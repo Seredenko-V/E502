@@ -4,8 +4,8 @@ data = data';
 figure(1);
 plot(data);
 N = length(data);
-fd = 20000;
-fn = 1000;
+fd = 9600;
+fn = 960;
 dt = 1 / fd;
 w0=2*pi*fn;
 delta = sqrt(1 / N * sum(data.^2)) / 10;
@@ -19,10 +19,11 @@ for k=3:length(data)
         err = [err k];
     end
 end
-real_err = []; % позиции разрывов фазы
-for k=2:length(err) - 1
-    if err(k) - err(k-1) > 1
-        real_err = [real_err err(k)];
-    end
-end
-disp(real_err); 
+% real_err = []; % позиции разрывов фазы
+% for k=2:length(err) - 1
+%     if err(k) - err(k-1) > 1
+%         real_err = [real_err err(k)];
+%     end
+% end
+% disp(real_err); 
+disp(err);

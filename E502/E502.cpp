@@ -11,8 +11,8 @@
 #include <iomanip> // округление
 #include <vector>
 
-#define M_PI 3.14159265358979323846
-#define DIGITS_AFTER_DECIMAL_POINT 4
+const double PI = 3.14159265358979323846;
+const uint32_t DIGITS_AFTER_DECIMAL_POINT = 4;
 #pragma comment (lib, "x502api.lib") // подключение статических библиотек, 
 #pragma comment (lib, "e502api.lib") // находящихся в папке проекта
 
@@ -188,23 +188,35 @@ void set_parametr(t_x502_hnd hnd, int32_t err, uint32_t Fd)
         cout << "Установленные настройки переданы в модуль" << endl;
 }
 
-void create_signal(double* signal, uint32_t sample_buf, double Fn, uint32_t Fd, double& phase, double A)
+//void create_signal(double* signal, uint32_t sample_buf, double Fn, uint32_t Fd, double& phase, double A)
+//{
+//    double delta_fi = 2.0 * M_PI * Fn / Fd; // приращение фазы
+//    for (uint32_t i = 0; i < sample_buf; i++)
+//    {
+//        signal[i] = A * sin(phase);
+//        phase += delta_fi;
+//        if (phase > M_PI)
+//            phase -= 2 * M_PI; // чтобы фаза была в пределах [-pi; pi]
+//    }
+//}
+
+void create_signal(double* signal, const uint32_t& sample_buf, const double& Fn, const uint32_t& Fd, const double& phase, const double& a, 
+    vector <double>& two_sample)
 {
-    double delta_fi = 2.0 * M_PI * Fn / Fd; // приращение фазы
-    for (uint32_t i = 0; i < sample_buf; i++)
-    {
-        signal[i] = A * sin(phase);
-        phase += delta_fi;
-        if (phase > M_PI)
-            phase -= 2 * M_PI; // чтобы фаза была в пределах [-pi; pi]
-    }
+    for (size_t i = 0; i < two_sample.size(); i++)
+        signal[i] = two_sample[i];
+    for (size_t i = 2; i < sample_buf; i++)
+        signal[i] = a * signal[i - 1] - signal[i - 2];
+    two_sample[0] = signal[sample_buf - 2];
+    two_sample[1] = signal[sample_buf - 1];
 }
 
+
 void preparation_and_transmission_data(t_x502_hnd& hnd, int32_t& err, double* signal_CH1, uint32_t& size_out_buf, double& Fn, uint32_t& Fd, double& phase_CH1,
-    uint32_t* out_buf, uint32_t& tout, double& A)
+    uint32_t* out_buf, uint32_t& tout, double& a, vector <double>& two_sample)
     // функции для подготовки данных и последующей передачи (страница руководства 24)
 {
-    create_signal(signal_CH1, size_out_buf, Fn, Fd, phase_CH1, A);
+    create_signal(signal_CH1, size_out_buf, Fn, Fd, phase_CH1, a, two_sample);
     err = X502_PrepareData(hnd, signal_CH1, NULL, NULL, size_out_buf, X502_DAC_FLAGS_VOLT, out_buf);
     if (err != X502_ERR_OK)
         printf("X502_PrepareData Error = %d: %s!\n", err, X502_GetErrorString(err));
@@ -232,14 +244,20 @@ void streaming_output_input(t_x502_hnd& hnd, int32_t& err, uint32_t size, double
     err = X502_PreloadStart(hnd);
     if (err != X502_ERR_OK)
         printf("X502_PreloadStart Error = %d: %s!\n", err, X502_GetErrorString(err));
-    preparation_and_transmission_data(hnd, err, signal_CH1, size_out_buf, Fn, Fd, phase_CH1, out_buf, tout, A);
+
+    vector <double> two_sample(2, 0); // два отсчета для генерирования колебания согласно формуле
+    for (size_t i = 0; i < two_sample.size(); i++)
+        two_sample[i] = A * sin(2.0 * PI * Fn * i / Fd);
+    double a = 2 * cos(2 * PI * Fn / Fd);
+
+    preparation_and_transmission_data(hnd, err, signal_CH1, size_out_buf, Fn, Fd, phase_CH1, out_buf, tout, a, two_sample);
     err = X502_StreamsStart(hnd);
     if (err != X502_ERR_OK)
         printf("X502_StreamsStart Error = %d: %s!\n", err, X502_GetErrorString(err));
     for (size_t i = 0; i < step; i++)
     {
         /************************ СИНХРОННЫЙ ПОТОКОВЫЙ ВЫВОД ************************/
-        preparation_and_transmission_data(hnd, err, signal_CH1, size_out_buf, Fn, Fd, phase_CH1, out_buf, tout, A);
+        preparation_and_transmission_data(hnd, err, signal_CH1, size_out_buf, Fn, Fd, phase_CH1, out_buf, tout, a, two_sample);
         /***************************************************************************/
         /************************ СИНХРОННЫЙ ПОТОКОВЫЙ ВВОД ************************/
         err = X502_Recv(hnd, input_buf, size_in_buf, tout);
@@ -282,21 +300,21 @@ int main()
     int32_t err = X502_ERR_OK;
     uint32_t tout = 1000; // таймаут (в мс) на время ожидания события
     uint32_t mode = X502_MODE_FPGA; // режим работы модуля
-    double Fn = 1000; // несущая частота, Гц
+    double Fn = 960; // несущая частота, Гц
     double A = 1.0; // амплитуда колебания
-    uint32_t Fd = 20000; // частота дискретизации, Гц (должна быть кратна опроной (2 МГц))
-    if (X502_REF_FREQ_2000KHZ % Fd)
-    {
-        cout << "Опорная частота не кратна частоте дискретизации." << endl << "Исправьте значение переменной Fd" << endl;
-        return 0;
-    }
+    uint32_t Fd = 9600; // частота дискретизации, Гц (должна быть кратна опроной (2 МГц))
+    //if (X502_REF_FREQ_2000KHZ % Fd)
+    //{
+    //    cout << "Опорная частота не кратна частоте дискретизации." << endl << "Исправьте значение переменной Fd" << endl;
+    //    return 0;
+    //}
     bool check_modules = false;
     open_connection_module(err, tout, hnd, mode, check_modules);
     if (!check_modules)
         return 0;
     set_parametr(hnd, err, Fd);
-    uint32_t size_buf = 1000; // количество отсчетов в одном буфере
-    uint32_t step = 400; // количество проходок цикла
+    uint32_t size_buf = 1024; // количество отсчетов в одном буфере
+    uint32_t step = 10; // количество проходок цикла
     t_x502_hnd hnd_in = hnd;
     streaming_output_input(hnd, err, size_buf, Fn, Fd, A, tout, step);
     close_connection_module(err, hnd);
