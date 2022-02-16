@@ -203,8 +203,8 @@ void set_parametr(t_x502_hnd hnd, int32_t err, uint32_t Fd)
 void create_signal(double* signal, const uint32_t& sample_buf, const double& Fn, const uint32_t& Fd, const double& phase, const double& a, 
     vector <double>& two_sample)
 {
-    for (size_t i = 0; i < two_sample.size(); i++)
-        signal[i] = two_sample[i];
+    signal[0] = a * two_sample[1] - two_sample[0];
+    signal[1] = a * signal[0] - two_sample[1];
     for (size_t i = 2; i < sample_buf; i++)
         signal[i] = a * signal[i - 1] - signal[i - 2];
     two_sample[0] = signal[sample_buf - 2];
