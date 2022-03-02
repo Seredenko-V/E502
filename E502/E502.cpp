@@ -190,13 +190,13 @@ void set_parametr(t_x502_hnd hnd, int32_t err, uint32_t Fd)
 
 //void create_signal(double* signal, uint32_t sample_buf, double Fn, uint32_t Fd, double& phase, double A)
 //{
-//    double delta_fi = 2.0 * M_PI * Fn / Fd; // приращение фазы
+//    double delta_fi = 2.0 * PI * Fn / Fd; // приращение фазы
 //    for (uint32_t i = 0; i < sample_buf; i++)
 //    {
-//        signal[i] = A * sin(phase);
+//        signal[i] = sin(phase);
 //        phase += delta_fi;
-//        if (phase > M_PI)
-//            phase -= 2 * M_PI; // чтобы фаза была в пределах [-pi; pi]
+//        if (phase > PI)
+//            phase -= 2 * PI; // чтобы фаза была в пределах [-pi; pi]
 //    }
 //}
 
@@ -300,9 +300,9 @@ int main()
     int32_t err = X502_ERR_OK;
     uint32_t tout = 1000; // таймаут (в мс) на время ожидания события
     uint32_t mode = X502_MODE_FPGA; // режим работы модуля
-    double Fn = 960; // несущая частота, Гц
+    double Fn = 1000; // несущая частота, Гц
     double A = 1.0; // амплитуда колебания
-    uint32_t Fd = 9600; // частота дискретизации, Гц (должна быть кратна опроной (2 МГц))
+    uint32_t Fd = 10000; // частота дискретизации, Гц (должна быть кратна опроной (2 МГц))
     //if (X502_REF_FREQ_2000KHZ % Fd)
     //{
     //    cout << "Опорная частота не кратна частоте дискретизации." << endl << "Исправьте значение переменной Fd" << endl;
@@ -313,8 +313,8 @@ int main()
     if (!check_modules)
         return 0;
     set_parametr(hnd, err, Fd);
-    uint32_t size_buf = 1024; // количество отсчетов в одном буфере
-    uint32_t step = 10; // количество проходок цикла
+    uint32_t size_buf = 256; // количество отсчетов в одном буфере
+    uint32_t step = 200; // количество проходок цикла передача/прием
     t_x502_hnd hnd_in = hnd;
     streaming_output_input(hnd, err, size_buf, Fn, Fd, A, tout, step);
     close_connection_module(err, hnd);
